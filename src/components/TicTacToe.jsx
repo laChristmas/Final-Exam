@@ -1,161 +1,145 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import StatsButton from './StatsButton';
 import './TicTacToe.css';
 
-function TicTacToe() {
+const TicTacToe = () => {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isPlayer1Turn, setIsPlayer1Turn] = useState(true);
-  const [gameOver, setGameOver] = useState(false);
+  const [gameComplete, setGameComplete] = useState(false);
   const [winner, setWinner] = useState(null);
-  const [moveCount, setMoveCount] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [gameStartTime, setGameStartTime] = useState(null);
+  const [moves, setMoves] = useState(0);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [animating, setAnimating] = useState(false);
 
-  useEffect(() => {
-    setGameStartTime(Date.now());
-    
-    // Track game start
-    const gameStats = JSON.parse(localStorage.getItem('gameStats') || '{}');
-    if (!gameStats.ticTacToe) {
-      gameStats.ticTacToe = { plays: 0, totalTime: 0 };
-    }
-    gameStats.ticTacToe.plays = (gameStats.ticTacToe.plays || 0) + 1;
-    gameStats.ticTacToe.startTime = Date.now();
-    localStorage.setItem('gameStats', JSON.stringify(gameStats));
-  }, []);
-
-  const checkWinner = (squares) => {
+  const checkWinner = (currentBoard) => {
     const lines = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6]
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6] // diagonals
     ];
 
-    for (let i = 0; i < lines.length; i++) {
-      const [a, b, c] = lines[i];
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-        return squares[a];
+    for (let line of lines) {
+      const [a, b, c] = line;
+      if (currentBoard[a] && currentBoard[a] === currentBoard[b] && currentBoard[a] === currentBoard[c]) {
+        return currentBoard[a];
       }
     }
     return null;
   };
 
-  const handleClick = (index) => {
-    if (board[index] || gameOver || isAnimating) return;
+  const handleCellClick = (index) => {
+    if (board[index] || gameComplete) return;
 
     const newBoard = [...board];
     newBoard[index] = isPlayer1Turn ? 'O' : 'X';
     setBoard(newBoard);
-    setIsPlayer1Turn(!isPlayer1Turn);
-    setMoveCount(prev => prev + 1);
-
-    const winner = checkWinner(newBoard);
+    setMoves(prev => prev + 1);
+    
+    const winnerFound = checkWinner(newBoard);
     const isBoardFull = newBoard.every(cell => cell !== null);
 
-    if (winner || isBoardFull) {
-      setGameOver(true);
-      setWinner(winner);
-      
-      // Start animation
-      setIsAnimating(true);
-      let animationCount = 0;
-      const animationInterval = setInterval(() => {
-        animationCount++;
-        if (animationCount >= 6) { // 3 seconds / 0.5 seconds = 6
-          clearInterval(animationInterval);
-          setIsAnimating(false);
-        }
-      }, 500);
+    if (winnerFound) {
+      setWinner(winnerFound);
+      setGameComplete(true);
+      handleGameEnd(winnerFound, newBoard.filter(cell => cell !== null).length);
+    } else if (isBoardFull) {
+      setGameComplete(true);
+      handleGameEnd(null, 9);
+    } else {
+      setIsPlayer1Turn(!isPlayer1Turn);
+    }
+  };
 
-      // Track game end
-      const gameStats = JSON.parse(localStorage.getItem('gameStats') || '{}');
-      if (gameStats.ticTacToe && gameStats.ticTacToe.startTime) {
-        const timeSpent = (Date.now() - gameStats.ticTacToe.startTime) / 1000;
-        gameStats.ticTacToe.totalTime = (gameStats.ticTacToe.totalTime || 0) + timeSpent;
-        delete gameStats.ticTacToe.startTime;
-        localStorage.setItem('gameStats', JSON.stringify(gameStats));
-      }
-
-      // Track stats
-      const stats = JSON.parse(localStorage.getItem('ticTacToeStats') || '{}');
-      if (!stats.player1) stats.player1 = 0;
-      if (!stats.player2) stats.player2 = 0;
-      if (!stats.total) stats.total = 0;
+  const handleGameEnd = (winnerSymbol, totalMoves) => {
+    // Start animation
+    setAnimating(true);
+    
+    setTimeout(() => {
+      setAnimating(false);
+      setShowOverlay(true);
       
-      stats.total = (stats.total || 0) + 1;
+      // Update stats
+      const stats = JSON.parse(localStorage.getItem('ticTacToeStats') || '{"player1Wins": 0, "player2Wins": 0, "totalGames": 0}');
+      stats.totalGames += 1;
       
-      if (winner === 'O') {
-        stats.player1 = (stats.player1 || 0) + 1;
-        // Trigger game win event (Player 1 wins)
-        window.dispatchEvent(new Event('gameWin'));
-      } else if (winner === 'X') {
-        stats.player2 = (stats.player2 || 0) + 1;
+      if (winnerSymbol === 'O') {
+        stats.player1Wins += 1;
+        // Trigger game win event for dashboard
+        window.dispatchEvent(new CustomEvent('gameWin'));
+      } else if (winnerSymbol === 'X') {
+        stats.player2Wins += 1;
       }
       
       localStorage.setItem('ticTacToeStats', JSON.stringify(stats));
-    }
+      
+      // Update game play stats
+      const gameStats = JSON.parse(localStorage.getItem('gameStats') || '{"ticTacToe": {"plays": 0, "totalTime": 0}}');
+      if (!gameStats.ticTacToe) {
+        gameStats.ticTacToe = { plays: 0, totalTime: 0 };
+      }
+      gameStats.ticTacToe.plays += 1;
+      const gameStartTime = localStorage.getItem('ticTacToeStartTime');
+      if (gameStartTime) {
+        const timeSpent = (Date.now() - parseInt(gameStartTime, 10)) / 1000;
+        gameStats.ticTacToe.totalTime += timeSpent;
+        localStorage.removeItem('ticTacToeStartTime');
+      }
+      localStorage.setItem('gameStats', JSON.stringify(gameStats));
+    }, 3000);
   };
 
   const handlePlayAgain = () => {
     setBoard(Array(9).fill(null));
     setIsPlayer1Turn(true);
-    setGameOver(false);
+    setGameComplete(false);
     setWinner(null);
-    setMoveCount(0);
-    setIsAnimating(false);
-    setGameStartTime(Date.now());
-    
-    // Track new game start
-    const gameStats = JSON.parse(localStorage.getItem('gameStats') || '{}');
-    if (!gameStats.ticTacToe) {
-      gameStats.ticTacToe = { plays: 0, totalTime: 0 };
-    }
-    gameStats.ticTacToe.plays = (gameStats.ticTacToe.plays || 0) + 1;
-    gameStats.ticTacToe.startTime = Date.now();
-    localStorage.setItem('gameStats', JSON.stringify(gameStats));
+    setMoves(0);
+    setShowOverlay(false);
+    setAnimating(false);
+    localStorage.setItem('ticTacToeStartTime', Date.now().toString());
   };
+
+  useEffect(() => {
+    localStorage.setItem('ticTacToeStartTime', Date.now().toString());
+  }, []);
 
   const getCellClassName = (index) => {
     let className = 'cell';
     if (board[index]) {
       className += ' filled';
-    } else if (!gameOver && !isAnimating) {
+    } else if (!gameComplete) {
       className += isPlayer1Turn ? ' player1-turn' : ' player2-turn';
     }
-    if (isAnimating) {
+    if (animating) {
       className += ' animating';
     }
     return className;
   };
 
   return (
-    <div className="main-body tic-tac-toe">
+    <div className="tic-tac-toe main-body">
+      <StatsButton />
       <div className="board-container">
-        <div className="board">
+        <div className={`board ${animating ? 'animating' : ''}`}>
           {board.map((cell, index) => (
             <div
               key={index}
               className={getCellClassName(index)}
-              onClick={() => handleClick(index)}
+              onClick={() => handleCellClick(index)}
             >
               {cell}
             </div>
           ))}
         </div>
-        {gameOver && !isAnimating && (
+        {showOverlay && (
           <div className="overlay">
-            <div className="overlay-content">
-              <p className="winner-text">
+            <div className="overlay-box">
+              <div className="winner-text">
                 {winner ? `${winner} wins` : 'No one wins'}
-              </p>
-              <p className="moves-text">
-                A total of {moveCount} moves were complete
-              </p>
+              </div>
+              <div className="moves-text">
+                A total of {moves} moves were complete
+              </div>
               <button className="play-again-button" onClick={handlePlayAgain}>
                 Play again
               </button>
@@ -163,10 +147,9 @@ function TicTacToe() {
           </div>
         )}
       </div>
-      <Link to="/statspanel" className="stats-button">Stats</Link>
     </div>
   );
-}
+};
 
 export default TicTacToe;
 

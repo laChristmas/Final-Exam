@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
+  min-height: calc(100vh - 100px);
 }
 
 .difficulty-selection {
@@ -12,47 +12,56 @@
   align-items: center;
 }
 
-.difficulty-selection button {
-  padding: 15px 30px;
+.difficulty-button {
+  width: 200px;
+  padding: 15px;
   font-size: 1.2em;
   background-color: #333;
   color: #fff;
-  border: 1px solid #fff;
+  border: 2px solid #fff;
   cursor: pointer;
   border-radius: 4px;
-  min-width: 150px;
 }
 
-.difficulty-selection button:hover {
-  background-color: #444;
+.difficulty-button:hover {
+  background-color: #555;
 }
 
-.game-content {
+.game-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
-  text-align: center;
+  max-width: 600px;
+  padding: 20px;
 }
 
-.game-message {
+.game-instruction {
   font-size: 1.5em;
-  margin-bottom: 20px;
+  text-align: center;
+  color: #fff;
 }
 
 .time-display {
   font-size: 1.5em;
+  color: #fff;
   font-weight: bold;
 }
 
 .error-message {
   color: #f00;
   font-size: 1.2em;
+  text-align: center;
 }
 
-.feedback-message {
+.game-message {
   color: #404040;
   font-size: 1.2em;
+  text-align: center;
+}
+
+.end-message {
+  color: #404040;
 }
 
 .guess-form {
@@ -60,13 +69,14 @@
   flex-direction: column;
   gap: 15px;
   align-items: center;
+  width: 100%;
 }
 
 .guess-input {
   padding: 10px;
   font-size: 1.2em;
-  text-align: center;
   width: 200px;
+  text-align: center;
   border: 2px solid #fff;
   background-color: #000;
   color: #fff;
@@ -77,29 +87,24 @@
   font-size: 1em;
   background-color: #333;
   color: #fff;
-  border: 1px solid #fff;
+  border: 2px solid #fff;
   cursor: pointer;
   border-radius: 4px;
 }
 
 .submit-button:hover {
-  background-color: #444;
+  background-color: #555;
 }
 
-.stats-button {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: #333;
-  color: #fff;
-  padding: 10px 20px;
-  text-decoration: none;
-  border-radius: 4px;
-  border: 1px solid #fff;
-  z-index: 999;
+@media (max-width: 1400px) {
+  .guess-the-number {
+    min-height: calc(100vh - 80px);
+  }
 }
 
-.stats-button:hover {
-  background-color: #444;
+@media (max-width: 800px) {
+  .guess-the-number {
+    min-height: calc(100vh - 60px);
+  }
 }
 

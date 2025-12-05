@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
+  min-height: calc(100vh - 100px);
 }
 
 .dashboard-content {
@@ -15,7 +15,7 @@
 .dashboard-line {
   color: #fff;
   font-size: 3em;
-  margin: 0;
+  text-align: center;
 }
 
 .reset-button {
@@ -32,20 +32,15 @@
   background-color: #d00;
 }
 
-.stats-button {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: #333;
-  color: #fff;
-  padding: 10px 20px;
-  text-decoration: none;
-  border-radius: 4px;
-  border: 1px solid #fff;
-  z-index: 999;
+@media (max-width: 1400px) {
+  .dashboard {
+    min-height: calc(100vh - 80px);
+  }
 }
 
-.stats-button:hover {
-  background-color: #444;
+@media (max-width: 800px) {
+  .dashboard {
+    min-height: calc(100vh - 60px);
+  }
 }
 

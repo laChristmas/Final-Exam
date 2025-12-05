@@ -1,6 +1,84 @@
 .seal-the-box {
   position: relative;
+  min-height: calc(100vh - 100px);
   overflow: hidden;
+}
+
+.belts-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 100px);
+  gap: 100px;
+  padding: 50px 0;
+}
+
+.belt-wrapper {
+  position: relative;
+  width: 100%;
+  height: 10px;
+}
+
+.belt {
+  width: 100%;
+  background-color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.belt.moving::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    #fff 0px,
+    #fff 20px,
+    #333 20px,
+    #333 40px
+  );
+  animation: belt-move 1s linear infinite;
+}
+
+@keyframes belt-move {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-20px);
+  }
+}
+
+.boxes-container {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  pointer-events: none;
+}
+
+.box {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.avatar {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.avatar-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .start-message {
@@ -8,77 +86,13 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 100;
   font-size: 2em;
-  text-align: center;
+  color: #fff;
+  z-index: 100;
+  pointer-events: none;
 }
 
-.belts-container {
-  display: flex;
-  flex-direction: column;
-  gap: 100px;
-  align-items: center;
-  padding: 50px 0;
-  min-height: 100%;
-  justify-content: center;
-}
-
-.belt-wrapper {
-  position: relative;
-  width: 100%;
-  height: 110px;
-}
-
-.belt {
-  position: absolute;
-  top: 50px;
-  left: 0;
-  width: 100%;
-  height: 10px;
-  background-color: #fff;
-  background-image: repeating-linear-gradient(
-    90deg,
-    #fff,
-    #fff 20px,
-    #ccc 20px,
-    #ccc 40px
-  );
-  background-size: 40px 10px;
-}
-
-@keyframes moveBelt {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 40px 0;
-  }
-}
-
-.belt-content {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.box {
-  position: absolute;
-  width: 100px;
-  height: 100px;
-  top: 0;
-  z-index: 10;
-}
-
-.avatar {
-  position: absolute;
-  top: 25px;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.game-over-overlay {
+.game-end-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -91,51 +105,53 @@
   z-index: 1000;
 }
 
-.game-over-content {
+.game-end-content {
   background-color: #333;
   padding: 40px;
   border-radius: 8px;
-  text-align: center;
-  color: #fff;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  align-items: center;
+  color: #fff;
 }
 
-.game-over-content p {
+.stat-item {
   font-size: 1.5em;
-  margin: 0;
+  text-align: center;
 }
 
 .play-again-button {
   padding: 10px 20px;
-  font-size: 1.2em;
-  background-color: #f00;
+  font-size: 1em;
+  background-color: #4a4;
   color: #fff;
   border: none;
   cursor: pointer;
   border-radius: 4px;
-  margin-top: 10px;
 }
 
 .play-again-button:hover {
-  background-color: #d00;
+  background-color: #3a3;
 }
 
-.stats-button {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: #333;
-  color: #fff;
-  padding: 10px 20px;
-  text-decoration: none;
-  border-radius: 4px;
-  border: 1px solid #fff;
-  z-index: 999;
+@media (max-width: 1400px) {
+  .seal-the-box {
+    min-height: calc(100vh - 80px);
+  }
+  
+  .belts-container {
+    min-height: calc(100vh - 80px);
+  }
 }
 
-.stats-button:hover {
-  background-color: #444;
+@media (max-width: 800px) {
+  .seal-the-box {
+    min-height: calc(100vh - 60px);
+  }
+  
+  .belts-container {
+    min-height: calc(100vh - 60px);
+  }
 }
 

@@ -1,103 +1,118 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import StatsButton from './StatsButton';
 import './Dashboard.css';
 
-function Dashboard() {
+const Dashboard = () => {
   const [gamesToWin, setGamesToWin] = useState(null);
   const [initialScore, setInitialScore] = useState(null);
 
   useEffect(() => {
-    // Load from localStorage first
-    const storedScore = localStorage.getItem('gamesToWin');
-    const storedInitial = localStorage.getItem('initialScore');
-    
-    if (storedScore !== null && storedInitial !== null) {
-      setGamesToWin(parseInt(storedScore, 10));
-      setInitialScore(parseInt(storedInitial, 10));
-    } else {
-      // Fetch from URL
-      fetch('https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json')
-        .then(response => response.json())
-        .then(data => {
-          const score = data.score;
-          setInitialScore(score);
-          setGamesToWin(score);
+    // Fetch initial score from API
+    const fetchInitialScore = async () => {
+      try {
+        const response = await fetch('https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json');
+        const data = await response.json();
+        const score = data.score;
+        setInitialScore(score);
+        
+        // Check localStorage for existing score
+        const storedScore = localStorage.getItem('gamesToWin');
+        if (storedScore !== null) {
+          const parsedScore = parseInt(storedScore, 10);
+          setGamesToWin(parsedScore);
+          
+          // Check if score reached 0 and show alert
+          if (parsedScore === 0) {
+            alert('Congratulations!');
+            // Reset to initial value
+            localStorage.setItem('gamesToWin', score.toString());
+            setGamesToWin(score);
+          }
+        } else {
+          // First time, set to initial score
           localStorage.setItem('gamesToWin', score.toString());
-          localStorage.setItem('initialScore', score.toString());
-        })
-        .catch(error => {
-          console.error('Error fetching score:', error);
-          // Fallback value
-          const fallback = 5;
-          setInitialScore(fallback);
-          setGamesToWin(fallback);
-          localStorage.setItem('gamesToWin', fallback.toString());
-          localStorage.setItem('initialScore', fallback.toString());
-        });
-    }
+          setGamesToWin(score);
+        }
+      } catch (error) {
+        console.error('Error fetching initial score:', error);
+        // Fallback to 5 if API fails
+        const fallbackScore = 5;
+        setInitialScore(fallbackScore);
+        const storedScore = localStorage.getItem('gamesToWin');
+        if (storedScore !== null) {
+          setGamesToWin(parseInt(storedScore, 10));
+        } else {
+          localStorage.setItem('gamesToWin', fallbackScore.toString());
+          setGamesToWin(fallbackScore);
+        }
+      }
+    };
 
-    // Listen for game win events
+    fetchInitialScore();
+  }, []);
+
+  // Listen for game win events
+  useEffect(() => {
     const handleGameWin = () => {
-      setGamesToWin(prev => {
-        if (prev === null) return null;
-        const newScore = Math.max(0, prev - 1);
+      const currentScore = parseInt(localStorage.getItem('gamesToWin'), 10);
+      if (currentScore > 0) {
+        const newScore = currentScore - 1;
         localStorage.setItem('gamesToWin', newScore.toString());
+        setGamesToWin(newScore);
         
         if (newScore === 0) {
           setTimeout(() => {
             alert('Congratulations!');
-            const initial = parseInt(localStorage.getItem('initialScore'), 10);
-            setGamesToWin(initial);
-            localStorage.setItem('gamesToWin', initial.toString());
+            // Reset to initial value
+            if (initialScore !== null) {
+              localStorage.setItem('gamesToWin', initialScore.toString());
+              setGamesToWin(initialScore);
+            }
           }, 100);
         }
-        
-        return newScore;
-      });
+      }
     };
 
     window.addEventListener('gameWin', handleGameWin);
     return () => window.removeEventListener('gameWin', handleGameWin);
-  }, []);
+  }, [initialScore]);
 
   const handleReset = async () => {
-    let scoreToUse = initialScore;
-    if (scoreToUse === null) {
+    if (initialScore !== null) {
+      localStorage.setItem('gamesToWin', initialScore.toString());
+      setGamesToWin(initialScore);
+    } else {
+      // Fetch again if initialScore is not set
       try {
         const response = await fetch('https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json');
         const data = await response.json();
-        scoreToUse = data.score;
-        setInitialScore(scoreToUse);
-        localStorage.setItem('initialScore', scoreToUse.toString());
+        const score = data.score;
+        localStorage.setItem('gamesToWin', score.toString());
+        setGamesToWin(score);
+        setInitialScore(score);
       } catch (error) {
-        scoreToUse = 5;
+        console.error('Error fetching initial score:', error);
       }
     }
-    setGamesToWin(scoreToUse);
-    localStorage.setItem('gamesToWin', scoreToUse.toString());
   };
 
-  if (gamesToWin === null) {
-    return (
-      <div className="main-body dashboard">
-        <div className="dashboard-content">
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="main-body dashboard">
+    <div className="dashboard main-body">
+      <StatsButton />
       <div className="dashboard-content">
-        <p className="dashboard-line">Choose your option from the navbar.</p>
-        <p className="dashboard-line">Games you need to win: {gamesToWin}</p>
-        <button className="reset-button" onClick={handleReset}>Reset</button>
+        <div className="dashboard-line">
+          Choose your option from the navbar.
+        </div>
+        <div className="dashboard-line">
+          Games you need to win: {gamesToWin !== null ? gamesToWin : 'Loading...'}
+        </div>
+        <button className="reset-button" onClick={handleReset}>
+          Reset
+        </button>
       </div>
-      <Link to="/statspanel" className="stats-button">Stats</Link>
     </div>
   );
-}
+};
 
 export default Dashboard;
 

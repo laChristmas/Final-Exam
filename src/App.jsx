@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
+import NavigationBar from './components/NavigationBar';
 import Dashboard from './components/Dashboard';
 import GuessTheNumber from './components/GuessTheNumber';
 import TicTacToe from './components/TicTacToe';
@@ -10,7 +10,7 @@ import './App.css';
 function App() {
   return (
     <Router>
-      <div className="app">
+      <div className="app-container">
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/game/guessthenumber" element={<GuessTheNumber />} />
@@ -19,7 +19,7 @@ function App() {
           <Route path="/statspanel" element={<StatsPanel />} />
           <Route path="/" element={<Dashboard />} />
         </Routes>
-        <Navbar />
+        <NavigationBar />
       </div>
     </Router>
   );

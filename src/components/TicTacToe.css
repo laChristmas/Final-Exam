@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
+  min-height: calc(100vh - 100px);
 }
 
 .board-container {
@@ -17,8 +17,7 @@
   grid-template-rows: repeat(3, 1fr);
   width: 100%;
   height: 100%;
-  gap: 2px;
-  border: 2px solid #fff;
+  gap: 0;
 }
 
 .cell {
@@ -29,13 +28,15 @@
   align-items: center;
   font-size: 2em;
   cursor: pointer;
-  border: 2px solid #fff;
   position: relative;
 }
 
-.cell.filled {
-  background-color: #000;
-  cursor: default;
+.cell:not(:nth-child(3n)) {
+  border-right: 2px solid #fff;
+}
+
+.cell:not(:nth-child(n + 7)) {
+  border-bottom: 2px solid #fff;
 }
 
 .cell.player1-turn {
@@ -44,6 +45,11 @@
 
 .cell.player2-turn {
   background-color: rgb(220, 220, 255);
+}
+
+.cell.filled {
+  background-color: #000;
+  cursor: default;
 }
 
 .cell.animating {
@@ -59,76 +65,79 @@
   }
 }
 
+.board.animating .cell {
+  animation: oscillate 0.5s infinite;
+}
+
 .overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10;
   pointer-events: all;
 }
 
-.overlay-content {
+.overlay-box {
   background-color: #fff;
-  width: 200px;
-  height: auto;
-  min-height: 50px;
-  padding: 20px;
+  width: 300px;
+  min-height: 150px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 10px;
+  padding: 20px;
   border-radius: 4px;
+  color: #000;
+  font-size: 14pt;
+  gap: 10px;
 }
 
 .winner-text {
   font-size: 14pt;
-  color: #000;
-  margin: 0;
-  text-align: center;
+  font-weight: bold;
 }
 
 .moves-text {
   font-size: 12pt;
-  color: #000;
-  margin: 0;
-  text-align: center;
 }
 
 .play-again-button {
-  padding: 8px 16px;
-  font-size: 1em;
+  padding: 5px 15px;
+  font-size: 12pt;
   background-color: #333;
   color: #fff;
-  border: 1px solid #000;
+  border: none;
   cursor: pointer;
   border-radius: 4px;
-  margin-top: 10px;
+  margin-top: 5px;
 }
 
 .play-again-button:hover {
-  background-color: #444;
+  background-color: #555;
 }
 
-.stats-button {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: #333;
-  color: #fff;
-  padding: 10px 20px;
-  text-decoration: none;
-  border-radius: 4px;
-  border: 1px solid #fff;
-  z-index: 999;
+@media (max-width: 1400px) {
+  .tic-tac-toe {
+    min-height: calc(100vh - 80px);
+  }
 }
 
-.stats-button:hover {
-  background-color: #444;
+@media (max-width: 800px) {
+  .tic-tac-toe {
+    min-height: calc(100vh - 60px);
+  }
+  
+  .board-container {
+    width: 90vw;
+    height: 90vw;
+    max-width: 600px;
+    max-height: 600px;
+  }
 }
 
