@@ -1,0 +1,51 @@
+.dashboard {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.dashboard-line {
+  color: #fff;
+  font-size: 3em;
+  margin: 0;
+}
+
+.reset-button {
+  background-color: #f00;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1em;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.reset-button:hover {
+  background-color: #d00;
+}
+
+.stats-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #333;
+  color: #fff;
+  padding: 10px 20px;
+  text-decoration: none;
+  border-radius: 4px;
+  border: 1px solid #fff;
+  z-index: 999;
+}
+
+.stats-button:hover {
+  background-color: #444;
+}
+
