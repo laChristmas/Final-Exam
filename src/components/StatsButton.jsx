@@ -1,13 +1,15 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './StatsButton.css';
 
-const StatsButton = () => {
+function StatsButton() {
+  const navigate = useNavigate();
+
   return (
-    <Link to="/statspanel" className="stats-button">
+    <button className="stats-button" onClick={() => navigate('/statspanel')}>
       Stats
-    </Link>
+    </button>
   );
-};
+}
 
 export default StatsButton;
 

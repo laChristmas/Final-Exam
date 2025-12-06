@@ -1,110 +1,97 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getGamesToWin, setGamesToWin } from '../utils/storage';
 import StatsButton from './StatsButton';
 import './Dashboard.css';
 
-const Dashboard = () => {
-  const [gamesToWin, setGamesToWin] = useState(null);
-  const [initialScore, setInitialScore] = useState(null);
+function Dashboard() {
+  const [gamesToWin, setGamesToWinState] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch initial score from API
     const fetchInitialScore = async () => {
       try {
         const response = await fetch('https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json');
         const data = await response.json();
-        const score = data.score;
-        setInitialScore(score);
+        const initialScore = data.score;
         
-        // Check localStorage for existing score
-        const storedScore = localStorage.getItem('gamesToWin');
-        if (storedScore !== null) {
-          const parsedScore = parseInt(storedScore, 10);
-          setGamesToWin(parsedScore);
-          
-          // Check if score reached 0 and show alert
-          if (parsedScore === 0) {
-            alert('Congratulations!');
-            // Reset to initial value
-            localStorage.setItem('gamesToWin', score.toString());
-            setGamesToWin(score);
-          }
+        const stored = getGamesToWin();
+        if (stored === null) {
+          setGamesToWin(initialScore);
+          setGamesToWinState(initialScore);
         } else {
-          // First time, set to initial score
-          localStorage.setItem('gamesToWin', score.toString());
-          setGamesToWin(score);
+          setGamesToWinState(stored);
         }
       } catch (error) {
         console.error('Error fetching initial score:', error);
-        // Fallback to 5 if API fails
-        const fallbackScore = 5;
-        setInitialScore(fallbackScore);
-        const storedScore = localStorage.getItem('gamesToWin');
-        if (storedScore !== null) {
-          setGamesToWin(parseInt(storedScore, 10));
+        const stored = getGamesToWin();
+        if (stored === null) {
+          setGamesToWin(5);
+          setGamesToWinState(5);
         } else {
-          localStorage.setItem('gamesToWin', fallbackScore.toString());
-          setGamesToWin(fallbackScore);
+          setGamesToWinState(stored);
         }
       }
     };
 
     fetchInitialScore();
-  }, []);
 
-  // Listen for game win events
-  useEffect(() => {
-    const handleGameWin = () => {
-      const currentScore = parseInt(localStorage.getItem('gamesToWin'), 10);
-      if (currentScore > 0) {
-        const newScore = currentScore - 1;
-        localStorage.setItem('gamesToWin', newScore.toString());
-        setGamesToWin(newScore);
-        
-        if (newScore === 0) {
-          setTimeout(() => {
-            alert('Congratulations!');
-            // Reset to initial value
-            if (initialScore !== null) {
-              localStorage.setItem('gamesToWin', initialScore.toString());
-              setGamesToWin(initialScore);
-            }
-          }, 100);
-        }
+    // Listen for storage changes from other tabs/windows
+    const handleStorageChange = (e) => {
+      if (e.key === 'gamesToWin') {
+        setGamesToWinState(parseInt(e.newValue, 10));
       }
     };
 
-    window.addEventListener('gameWin', handleGameWin);
-    return () => window.removeEventListener('gameWin', handleGameWin);
-  }, [initialScore]);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    if (gamesToWin === 0) {
+      alert('Congratulations!');
+      const fetchAndReset = async () => {
+        try {
+          const response = await fetch('https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json');
+          const data = await response.json();
+          const initialScore = data.score;
+          setGamesToWin(initialScore);
+          setGamesToWinState(initialScore);
+        } catch (error) {
+          setGamesToWin(5);
+          setGamesToWinState(5);
+        }
+      };
+      fetchAndReset();
+    }
+  }, [gamesToWin]);
 
   const handleReset = async () => {
-    if (initialScore !== null) {
-      localStorage.setItem('gamesToWin', initialScore.toString());
+    try {
+      const response = await fetch('https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json');
+      const data = await response.json();
+      const initialScore = data.score;
       setGamesToWin(initialScore);
-    } else {
-      // Fetch again if initialScore is not set
-      try {
-        const response = await fetch('https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json');
-        const data = await response.json();
-        const score = data.score;
-        localStorage.setItem('gamesToWin', score.toString());
-        setGamesToWin(score);
-        setInitialScore(score);
-      } catch (error) {
-        console.error('Error fetching initial score:', error);
-      }
+      setGamesToWinState(initialScore);
+    } catch (error) {
+      setGamesToWin(5);
+      setGamesToWinState(5);
     }
   };
 
+  if (gamesToWin === null) {
+    return <div className="main-body">Loading...</div>;
+  }
+
   return (
-    <div className="dashboard main-body">
+    <div className="main-body dashboard">
       <StatsButton />
       <div className="dashboard-content">
-        <div className="dashboard-line">
+        <div className="dashboard-text">
           Choose your option from the navbar.
         </div>
-        <div className="dashboard-line">
-          Games you need to win: {gamesToWin !== null ? gamesToWin : 'Loading...'}
+        <div className="dashboard-text">
+          Games you need to win: {gamesToWin}
         </div>
         <button className="reset-button" onClick={handleReset}>
           Reset
@@ -112,7 +99,7 @@ const Dashboard = () => {
       </div>
     </div>
   );
-};
+}
 
 export default Dashboard;
 

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import NavigationBar from './components/NavigationBar';
+import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import GuessTheNumber from './components/GuessTheNumber';
 import TicTacToe from './components/TicTacToe';
@@ -19,7 +19,7 @@ function App() {
           <Route path="/statspanel" element={<StatsPanel />} />
           <Route path="/" element={<Dashboard />} />
         </Routes>
-        <NavigationBar />
+        <Navigation />
       </div>
     </Router>
   );

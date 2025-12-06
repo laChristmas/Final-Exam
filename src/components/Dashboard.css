@@ -12,20 +12,20 @@
   gap: 2rem;
 }
 
-.dashboard-line {
-  color: #fff;
+.dashboard-text {
+  color: white;
   font-size: 3em;
   text-align: center;
 }
 
 .reset-button {
   background-color: #f00;
-  color: #fff;
+  color: white;
   border: none;
   padding: 10px 20px;
   font-size: 1em;
   cursor: pointer;
-  border-radius: 4px;
+  text-align: center;
 }
 
 .reset-button:hover {

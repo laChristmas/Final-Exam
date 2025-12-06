@@ -1,249 +1,204 @@
 import { useState, useEffect, useRef } from 'react';
-import unsealedBoxImg from '../assets/unsealed-box.svg';
-import sealedBoxImg from '../assets/sealed-box.svg';
+import { updateSealTheBoxStats, getSealTheBoxStats, addGamePlayTime } from '../utils/storage';
 import StatsButton from './StatsButton';
 import './SealTheBox.css';
 
-const SealTheBox = () => {
+function SealTheBox() {
   const [gameStarted, setGameStarted] = useState(false);
   const [currentBelt, setCurrentBelt] = useState(1); // 0, 1, or 2
-  const [belts, setBelts] = useState([
-    { boxes: [], offset: 0 },
-    { boxes: [], offset: 0 },
-    { boxes: [], offset: 0 }
-  ]);
-  const [sealedCount, setSealedCount] = useState(0);
-  const [finalSealedCount, setFinalSealedCount] = useState(0);
-  const [unsealedPassed, setUnsealedPassed] = useState(0);
-  const [gameEnded, setGameEnded] = useState(false);
-  const animationFrameRef = useRef(null);
-  const lastTimeRef = useRef(null);
-  const gameStartTimeRef = useRef(null);
-  const currentBeltRef = useRef(1);
-  const unsealedPassedRef = useRef(0);
-
-  const BELT_HEIGHT = 10;
-  const BOX_SIZE = 100;
-  const BOX_SPACING = 100;
-  const SPEED = 20; // pixels per second
-  const BELT_GAP = 100;
+  const [boxes, setBoxes] = useState([[], [], []]); // boxes for each belt
+  const [sealedBoxes, setSealedBoxes] = useState(new Set());
+  const [unsealedMissed, setUnsealedMissed] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [boxesSealed, setBoxesSealed] = useState(0);
+  const [startTime, setStartTime] = useState(null);
+  const [beltOffset, setBeltOffset] = useState([0, 0, 0]);
+  const animationRef = useRef(null);
+  const beltSpeed = 20; // px per second
+  const frameRate = 60;
 
   useEffect(() => {
-    // Initialize boxes on belts
-    const initializeBoxes = () => {
-      const newBelts = [];
-      for (let i = 0; i < 3; i++) {
-        const boxes = [];
-        let position = window.innerWidth + 200;
-        while (position < window.innerWidth + 2000) {
-          boxes.push({
-            id: Math.random(),
-            x: position,
-            sealed: false
-          });
-          position += BOX_SIZE + BOX_SPACING + Math.random() * 200;
-        }
-        newBelts.push({ boxes, offset: 0 });
+    // Initialize boxes on each belt
+    const initialBoxes = [[], [], []];
+    for (let belt = 0; belt < 3; belt++) {
+      let position = window.innerWidth + Math.random() * 500;
+      const maxPosition = window.innerWidth + 2000;
+      while (position < maxPosition) {
+        initialBoxes[belt].push({
+          id: `${belt}-${Date.now()}-${Math.random()}`,
+          position: position,
+          sealed: false
+        });
+        position += Math.random() * 300 + 100; // Min 100px spacing
       }
-      setBelts(newBelts);
-    };
+    }
+    setBoxes(initialBoxes);
+  }, []);
 
-    initializeBoxes();
+  useEffect(() => {
+    if (gameStarted && !gameOver) {
+      const interval = setInterval(() => {
+        const deltaTime = 1 / frameRate;
+        const moveDistance = beltSpeed * deltaTime;
 
+        setBoxes((prevBoxes) => {
+          const newBoxes = [[], [], []];
+          let missedCount = 0;
+
+          for (let belt = 0; belt < 3; belt++) {
+            for (let box of prevBoxes[belt]) {
+              const newPosition = box.position - moveDistance;
+              
+              // Avatar position (centered)
+              const avatarCenter = window.innerWidth / 2;
+              const avatarLeft = avatarCenter - 25; // Avatar is 50px wide
+              const avatarRight = avatarCenter + 25;
+              
+              // Box edges
+              const boxLeft = newPosition;
+              const boxRight = newPosition + 100; // Box is 100px wide
+              
+              // Check if box moved off screen
+              if (boxRight < 0) {
+                if (!box.sealed && !sealedBoxes.has(box.id)) {
+                  missedCount++;
+                }
+                continue; // Remove box
+              }
+
+              // Check if box should be sealed (touching avatar on same belt)
+              // "As long as the right side edge of the box hasn't fully surpass the left side edge of the avatar"
+              let shouldSeal = false;
+              if (belt === currentBelt && !box.sealed && !sealedBoxes.has(box.id)) {
+                // Box is touching if: boxRight >= avatarLeft (right edge hasn't passed left edge of avatar)
+                // AND box is on the same belt
+                if (boxRight >= avatarLeft && boxLeft <= avatarRight) {
+                  shouldSeal = true;
+                }
+              }
+
+              if (shouldSeal) {
+                setSealedBoxes((prev) => {
+                  const newSet = new Set(prev);
+                  newSet.add(box.id);
+                  return newSet;
+                });
+                setBoxesSealed((prev) => prev + 1);
+                newBoxes[belt].push({ ...box, position: newPosition, sealed: true });
+              } else {
+                newBoxes[belt].push({ ...box, position: newPosition });
+              }
+            }
+
+            // Add new boxes periodically
+            if (Math.random() < 0.01) {
+              const lastBox = newBoxes[belt][newBoxes[belt].length - 1];
+              const newPosition = lastBox 
+                ? lastBox.position + Math.random() * 300 + 200 
+                : window.innerWidth + Math.random() * 500;
+              newBoxes[belt].push({
+                id: `${belt}-${Date.now()}-${Math.random()}`,
+                position: newPosition,
+                sealed: false
+              });
+            }
+          }
+
+          // Check game over condition
+          if (missedCount > 0) {
+            setUnsealedMissed((prev) => {
+              const newCount = prev + missedCount;
+              if (newCount >= 3) {
+                setGameOver(true);
+                const playTime = (Date.now() - startTime) / 1000;
+                addGamePlayTime('sealTheBox', playTime);
+                const stats = getSealTheBoxStats();
+                if (boxesSealed > stats.bestScore) {
+                  updateSealTheBoxStats(boxesSealed);
+                }
+              }
+              return newCount;
+            });
+          }
+
+          return newBoxes;
+        });
+
+        // Update belt animation offset
+        setBeltOffset((prev) => [
+          prev[0] - moveDistance,
+          prev[1] - moveDistance,
+          prev[2] - moveDistance
+        ]);
+      }, 1000 / frameRate);
+
+      animationRef.current = interval;
+      return () => clearInterval(interval);
+    }
+  }, [gameStarted, gameOver, currentBelt, sealedBoxes, boxesSealed, startTime]);
+
+  useEffect(() => {
     const handleKeyPress = (e) => {
       if (!gameStarted && e.key) {
         setGameStarted(true);
-        gameStartTimeRef.current = Date.now();
-        lastTimeRef.current = Date.now();
-      }
-    };
-
-    const handleArrowKeys = (e) => {
-      if (!gameStarted || gameEnded) return;
-      
-      if (e.key === 'ArrowUp' && currentBeltRef.current > 0) {
-        currentBeltRef.current = currentBeltRef.current - 1;
-        setCurrentBelt(currentBeltRef.current);
-      } else if (e.key === 'ArrowDown' && currentBeltRef.current < 2) {
-        currentBeltRef.current = currentBeltRef.current + 1;
-        setCurrentBelt(currentBeltRef.current);
+        setStartTime(Date.now());
+      } else if (gameStarted && !gameOver) {
+        if (e.key === 'ArrowUp' && currentBelt > 0) {
+          setCurrentBelt(currentBelt - 1);
+        } else if (e.key === 'ArrowDown' && currentBelt < 2) {
+          setCurrentBelt(currentBelt + 1);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
-    window.addEventListener('keydown', handleArrowKeys);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-      window.removeEventListener('keydown', handleArrowKeys);
-    };
-  }, [gameStarted, currentBelt, gameEnded]);
-
-  useEffect(() => {
-    if (!gameStarted || gameEnded) return;
-
-    const animate = (currentTime) => {
-      if (!lastTimeRef.current) {
-        lastTimeRef.current = currentTime;
-      }
-
-      const deltaTime = (currentTime - lastTimeRef.current) / 1000; // Convert to seconds
-      lastTimeRef.current = currentTime;
-
-      setBelts((prevBelts) => {
-        let totalSealed = 0;
-        let newUnsealedPassed = unsealedPassedRef.current;
-        let shouldEndGame = false;
-
-        const newBelts = prevBelts.map((belt, beltIndex) => {
-          const newBoxes = belt.boxes.map((box) => {
-            const newX = box.x - SPEED * deltaTime;
-            let isSealed = box.sealed;
-            
-            // Check if box is being touched by avatar
-            if (!box.sealed && beltIndex === currentBeltRef.current) {
-              const avatarX = window.innerWidth / 2; // Avatar is centered
-              const boxRight = newX + BOX_SIZE;
-              const avatarLeft = avatarX - 25; // Avatar is 50px wide, centered
-              
-              // Touch detection: right edge of box hasn't fully passed left edge of avatar
-              if (boxRight >= avatarLeft && newX <= avatarX + 25) {
-                isSealed = true;
-              }
-            }
-            
-            if (isSealed) {
-              totalSealed++;
-            }
-            
-            return { ...box, x: newX, sealed: isSealed };
-          }).filter((box) => {
-            // Remove boxes that have passed off screen
-            if (box.x + BOX_SIZE < 0) {
-              if (!box.sealed) {
-                newUnsealedPassed++;
-                unsealedPassedRef.current = newUnsealedPassed;
-                if (newUnsealedPassed >= 3) {
-                  shouldEndGame = true;
-                }
-              }
-              return false;
-            }
-            return true;
-          });
-
-          // Add new boxes periodically
-          const rightmostBox = newBoxes.length > 0 
-            ? Math.max(...newBoxes.map(b => b.x))
-            : window.innerWidth;
-          
-          if (rightmostBox < window.innerWidth + 500) {
-            newBoxes.push({
-              id: Math.random(),
-              x: rightmostBox + BOX_SIZE + BOX_SPACING + Math.random() * 200,
-              sealed: false
-            });
-          }
-
-          return { ...belt, boxes: newBoxes };
-        });
-
-        // Update state outside of setBelts to avoid stale closures
-        setSealedCount(totalSealed);
-        setUnsealedPassed(newUnsealedPassed);
-        
-        if (shouldEndGame) {
-          setTimeout(() => {
-            setFinalSealedCount(totalSealed);
-            setGameEnded(true);
-            handleGameEnd(totalSealed);
-          }, 0);
-        }
-
-        return newBelts;
-      });
-
-      if (!gameEnded) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrameRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [gameStarted, gameEnded]);
-
-  const handleGameEnd = (finalSealedCount) => {
-    // Update stats
-    const stats = JSON.parse(localStorage.getItem('sealTheBoxStats') || '{"bestScore": 0}');
-    const countToUse = finalSealedCount !== undefined ? finalSealedCount : sealedCount;
-    if (countToUse > stats.bestScore) {
-      stats.bestScore = countToUse;
-    }
-    localStorage.setItem('sealTheBoxStats', JSON.stringify(stats));
-
-    // Update game play stats
-    const gameStats = JSON.parse(localStorage.getItem('gameStats') || '{"sealTheBox": {"plays": 0, "totalTime": 0}}');
-    if (!gameStats.sealTheBox) {
-      gameStats.sealTheBox = { plays: 0, totalTime: 0 };
-    }
-    gameStats.sealTheBox.plays += 1;
-    if (gameStartTimeRef.current) {
-      const timeSpent = (Date.now() - gameStartTimeRef.current) / 1000;
-      gameStats.sealTheBox.totalTime += timeSpent;
-    }
-    localStorage.setItem('gameStats', JSON.stringify(gameStats));
-  };
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [gameStarted, gameOver, currentBelt]);
 
   const handlePlayAgain = () => {
     setGameStarted(false);
-    currentBeltRef.current = 1;
     setCurrentBelt(1);
-    setSealedCount(0);
-    setFinalSealedCount(0);
-    unsealedPassedRef.current = 0;
-    setUnsealedPassed(0);
-    setGameEnded(false);
-    gameStartTimeRef.current = null;
-    lastTimeRef.current = null;
+    setBoxes([[], [], []]);
+    setSealedBoxes(new Set());
+    setUnsealedMissed(0);
+    setGameOver(false);
+    setBoxesSealed(0);
+    setStartTime(null);
+    setBeltOffset([0, 0, 0]);
     
     // Reinitialize boxes
-    const newBelts = [];
-    for (let i = 0; i < 3; i++) {
-      const boxes = [];
-      let position = window.innerWidth + 200;
-      while (position < window.innerWidth + 2000) {
-        boxes.push({
-          id: Math.random(),
-          x: position,
+    const initialBoxes = [[], [], []];
+    for (let belt = 0; belt < 3; belt++) {
+      let position = window.innerWidth + Math.random() * 500;
+      const maxPosition = window.innerWidth + 2000;
+      while (position < maxPosition) {
+        initialBoxes[belt].push({
+          id: `${belt}-${Date.now()}-${Math.random()}`,
+          position: position,
           sealed: false
         });
-        position += BOX_SIZE + BOX_SPACING + Math.random() * 200;
+        position += Math.random() * 300 + 100;
       }
-      newBelts.push({ boxes, offset: 0 });
     }
-    setBelts(newBelts);
+    setBoxes(initialBoxes);
   };
 
-  const getAvatarY = () => {
-    return currentBelt * (BELT_HEIGHT + BELT_GAP) + BELT_HEIGHT / 2;
-  };
+  const stats = getSealTheBoxStats();
 
   return (
-    <div className="seal-the-box main-body">
+    <div className="main-body seal-the-box">
       <StatsButton />
-      {gameEnded && (
-        <div className="game-end-overlay">
-          <div className="game-end-content">
+      {!gameStarted && (
+        <div className="start-message">Press any key to start</div>
+      )}
+      {gameOver && (
+        <div className="game-over-overlay">
+          <div className="game-over-content">
             <div className="stat-item">
-              Total boxes sealed: {finalSealedCount || sealedCount}
+              Total boxes sealed: {boxesSealed}
             </div>
             <div className="stat-item">
-              Best score: {JSON.parse(localStorage.getItem('sealTheBoxStats') || '{"bestScore": 0}').bestScore}
+              Best score: {stats.bestScore}
             </div>
             <button className="play-again-button" onClick={handlePlayAgain}>
               Play again
@@ -252,52 +207,35 @@ const SealTheBox = () => {
         </div>
       )}
       <div className="belts-container">
-        {belts.map((belt, beltIndex) => (
-          <div key={beltIndex} className="belt-wrapper" style={{ marginBottom: beltIndex < 2 ? `${BELT_GAP}px` : '0' }}>
-            <div className={`belt ${gameStarted ? 'moving' : ''}`} style={{ height: `${BELT_HEIGHT}px` }}></div>
-            <div className="boxes-container">
-              {belt.boxes.map((box) => (
-                <img
+        {[0, 1, 2].map((beltIndex) => (
+          <div key={beltIndex} className="belt-wrapper" style={{ marginBottom: '100px' }}>
+            <div 
+              className="belt" 
+              style={{ 
+                backgroundPositionX: `${beltOffset[beltIndex] % 40}px`
+              }}
+            ></div>
+            <div className="belt-content">
+              {boxes[beltIndex].map((box) => (
+                <div
                   key={box.id}
-                  src={box.sealed ? sealedBoxImg : unsealedBoxImg}
-                  alt={box.sealed ? 'Sealed box' : 'Unsealed box'}
-                  className="box"
-                  style={{
-                    left: `${box.x}px`,
-                    top: `${-BOX_SIZE / 2}px`,
-                    width: `${BOX_SIZE}px`,
-                    height: `${BOX_SIZE}px`
-                  }}
-                />
+                  className={`box ${box.sealed || sealedBoxes.has(box.id) ? 'sealed' : 'unsealed'}`}
+                  style={{ left: `${box.position}px` }}
+                >
+                  {box.sealed || sealedBoxes.has(box.id) ? '✓' : '□'}
+                </div>
               ))}
+              {beltIndex === currentBelt && (
+                <div className="avatar" style={{ left: '50%', transform: 'translateX(-50%)' }}>
+                  👤
+                </div>
+              )}
             </div>
-            {beltIndex === currentBelt && (
-              <div
-                className="avatar"
-                style={{
-                  top: `${-25}px`,
-                  left: '50%',
-                  transform: 'translateX(-50%)'
-                }}
-              >
-                <img
-                  src="https://via.placeholder.com/50x50/4a4/fff?text=U"
-                  alt="Avatar"
-                  className="avatar-img"
-                />
-              </div>
-            )}
           </div>
         ))}
       </div>
-      {!gameStarted && (
-        <div className="start-message">
-          Press any key to start
-        </div>
-      )}
     </div>
   );
-};
+}
 
 export default SealTheBox;
-
